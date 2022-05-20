@@ -57,7 +57,11 @@ class Room {
     this.roomName = name;
     this.image = assignImg(name);
   }
-
+  void updateRoomDetails(String name, List<String> IPs){
+    this.roomName = name;
+    this.image = assignImg(name);
+    this.channelsIPs = IPs;
+  }
   String assignImg(String name) {
     String img = "icons/living_room.png";
     if (name.isEmpty) {
@@ -151,6 +155,16 @@ class Room {
     switchState[deviceToIndex[dev] as int] = (cmnd == "ON");
     return true;
   }
+  
+  String getIPs(){
+    StringBuffer buffer = new StringBuffer();
+    for(String IP in channelsIPs){
+      buffer.write(IP);
+      buffer.write("\n");
+    }
+    String result = buffer.toString();
+    return result.substring(0,result.length-1);
+  }
 
   void dispose() async {
     try {
@@ -190,7 +204,7 @@ class MyApp extends StatelessWidget {
 
 class HomePage extends StatefulWidget {
   List<Room> rooms;
-  bool isDelete = false;
+  bool isEdit = false;
 
   HomePage({Key? key, required this.rooms}) : super(key: key) {}
 
@@ -209,7 +223,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Smart Home"),
-        actions: widget.isDelete
+        actions: widget.isEdit
             ? [
                 IconButton(
                   icon: Icon(
@@ -218,7 +232,7 @@ class _HomePageState extends State<HomePage> {
                   iconSize: 30,
                   onPressed: () {
                     setState(() {
-                      widget.isDelete = false;
+                      widget.isEdit = false;
                     });
                   },
                 )
@@ -228,13 +242,13 @@ class _HomePageState extends State<HomePage> {
       body: GridView(
         gridDelegate:
             const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
-        children: widget.isDelete
-            ? getDeletableHomeButtons(context)
+        children: widget.isEdit
+            ? getEditableHomeButtons(context)
             : getHomeButtons(context),
         physics: const ScrollPhysics(),
       ),
       floatingActionButton: Row(
-        children: widget.isDelete ? [] : getFloatingButtons(),
+        children: widget.isEdit ? [] : getFloatingButtons(),
         mainAxisSize: MainAxisSize.min,
       ),
     );
@@ -247,11 +261,11 @@ class _HomePageState extends State<HomePage> {
         FloatingActionButton(
           onPressed: () {
             setState(() {
-              widget.isDelete = true;
+              widget.isEdit = true;
             });
           },
-          backgroundColor: Colors.red,
-          child: const Icon(Icons.delete),
+          backgroundColor: Colors.blue,
+          child: const Icon(Icons.edit),
           heroTag: "deletBtn",
         ),
         SizedBox(
@@ -385,17 +399,118 @@ class _HomePageState extends State<HomePage> {
     return buttons;
   }
 
-  List<HomeButtonDeletable> getDeletableHomeButtons(BuildContext context) {
-    List<HomeButtonDeletable> buttons = [];
+  List<HomeButtonEditable> getEditableHomeButtons(BuildContext context) {
+    List<HomeButtonEditable> buttons = [];
     for (Room room in widget.rooms) {
-      buttons.add(HomeButtonDeletable(
+      buttons.add(HomeButtonEditable(
         image: room.image,
         text: room.roomName,
-        onTap: () {
-          setState(() {
-            widget.rooms.remove(room);
-            saveRoomsFile();
+        deleteOnTap: () {
+          showAlertDialog(
+              context,
+              "No",
+              "Yes",
+              "Would you like to delete this room?",
+              () => {Navigator.pop(context)}, () {
+            Navigator.pop(context);
+            setState(() {
+              widget.rooms.remove(room);
+              saveRoomsFile();
+            });
           });
+        },
+        editOnTap: (){
+          roomName.text = room.roomName;
+          roomIPs.text = room.getIPs();
+          showDialog(
+              context: context,
+              builder: (context) {
+                bool buttonEnable = true;
+                bool isNameEmpty = false;
+                bool isIPEmpty = false;
+                return StatefulBuilder(
+                  builder: (BuildContext context,
+                      void Function(void Function()) setDialogState) {
+                    return Dialog(
+                      child: Container(
+                        height: 200,
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                const Text(
+                                  "Room Name: ",
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                Flexible(
+                                  child: TextField(
+                                    onChanged: (val) {
+                                      isNameEmpty = val.isEmpty;
+                                      setDialogState(() {
+                                        buttonEnable = !isNameEmpty && !isIPEmpty;
+                                      });
+                                    },
+                                    controller: roomName,
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  "Modules IPs: ",
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                Flexible(
+                                  child: TextField(
+                                    onChanged: (val) {
+                                      isIPEmpty = val.isEmpty;
+                                      setDialogState(() {
+                                        buttonEnable = !isNameEmpty && !isIPEmpty;
+                                      });
+                                    },
+                                    controller: roomIPs,
+                                    maxLines: 3,
+                                    minLines: 1,
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                ElevatedButton(
+                                  child: const Text("Cancel"),
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                                ElevatedButton(
+                                  child: Text("Save"),
+                                  onPressed: buttonEnable
+                                      ? () {
+                                    setState(() {
+                                      room.updateRoomDetails( roomName.text, roomIPs.text.split("\n"));
+                                    });
+                                    saveRoomsFile();
+                                    Navigator.pop(context);
+                                  }
+                                      : null,
+                                ),
+                              ],
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            ),
+                          ],
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        ),
+                        margin: const EdgeInsets.all(20),
+                      ),
+                    );
+                  },
+                );
+              });
+          
         },
         fontSize: 18,
       ));
@@ -422,5 +537,32 @@ class _HomePageState extends State<HomePage> {
         await file.writeAsString(IP + "#", mode: FileMode.append);
       }
     }
+  }
+
+  showAlertDialog(BuildContext context, String button1, String button2,
+      String msg, Function()? button1OnPressed, Function()? button2OnPressed) {
+    Widget cancelButton = TextButton(
+      child: Text(button1),
+      onPressed: button1OnPressed,
+    );
+    Widget continueButton = TextButton(
+      child: Text(button2),
+      onPressed: button2OnPressed,
+    );
+
+    AlertDialog alert = AlertDialog(
+      title: Text("Confirmation"),
+      content: Text(msg),
+      actions: [
+        cancelButton,
+        continueButton,
+      ],
+    );
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
   }
 }

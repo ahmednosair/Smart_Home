@@ -48,17 +48,19 @@ class HomeButton extends StatelessWidget {
   }
 }
 
-class HomeButtonDeletable extends StatelessWidget {
-  const HomeButtonDeletable({
+class HomeButtonEditable extends StatelessWidget {
+  const HomeButtonEditable({
     Key? key,
     required this.image,
     required this.text,
-    required this.onTap,
+    required this.deleteOnTap,
+    required this.editOnTap,
     this.fontSize = 18,
   }) : super(key: key);
   final String image;
   final String text;
-  final VoidCallback onTap;
+  final VoidCallback deleteOnTap;
+  final VoidCallback editOnTap;
   final double fontSize;
 
   @override
@@ -90,9 +92,23 @@ class HomeButtonDeletable extends StatelessWidget {
           ),
         ]),
       ),
-      IconButton(
-        icon: Icon(Icons.cancel,color: Colors.red,),
-        onPressed: onTap,
+      Column(
+        children: [
+          IconButton(
+            icon: Icon(
+              Icons.delete,
+              color: Colors.red,
+            ),
+            onPressed: deleteOnTap,
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.edit,
+              color: Colors.grey,
+            ),
+            onPressed: editOnTap,
+          ),
+        ],
       ),
     ]);
   }
