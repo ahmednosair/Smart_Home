@@ -25,7 +25,7 @@ class HomeButton extends StatelessWidget {
         child: Column(children: [
           Expanded(
             child: Center(
-              child: Container(
+              child: SizedBox(
                 width: Get.width / 5,
                 height: Get.height / 10,
                 child: Image.asset(
@@ -73,7 +73,7 @@ class HomeButtonEditable extends StatelessWidget {
         child: Column(children: [
           Expanded(
             child: Center(
-              child: Container(
+              child: SizedBox(
                 width: Get.width / 5,
                 height: Get.height / 10,
                 child: Image.asset(
@@ -95,14 +95,14 @@ class HomeButtonEditable extends StatelessWidget {
       Column(
         children: [
           IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.delete,
               color: Colors.red,
             ),
             onPressed: deleteOnTap,
           ),
           IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.edit,
               color: Colors.grey,
             ),
