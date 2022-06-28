@@ -134,7 +134,7 @@ class Room {
     return result.substring(0,result.length-1);
   }
 
-  void dispose() async {
+  Future<void> dispose() async {
     try {
       for (Socket socket in channels) {
         await socket.close();

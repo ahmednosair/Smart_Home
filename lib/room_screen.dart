@@ -19,6 +19,7 @@ class RoomScreen extends StatefulWidget {
 
   RoomScreen({Key? key, required this.room}) : super(key: key);
 }
+
 class _RoomScreenState extends State<RoomScreen> {
   Future<bool> initializeRoom() async {
     widget.room.devicesNames.clear();
@@ -33,10 +34,11 @@ class _RoomScreenState extends State<RoomScreen> {
       int oldDevicesSize = widget.room.devicesNames.length;
       try {
         Socket sock = await Socket.connect(ip, 80);
+
         StringBuffer response = StringBuffer();
         bool done = false;
         Stream broadStream = sock.asBroadcastStream();
-        StreamSubscription sub = broadStream.listen((event) {
+        StreamSubscription sub =  broadStream.listen((event) {
           String s = const AsciiDecoder().convert(event);
           response.write(s);
           if (s.codeUnitAt(s.length - 1) == '\n'.codeUnitAt(0)) {
@@ -44,8 +46,8 @@ class _RoomScreenState extends State<RoomScreen> {
           }
         });
         int timeOut = 0;
-        while (!done && timeOut < 25) {
-          await Future.delayed(const Duration(milliseconds: 1));
+        while (!done && timeOut < 5) {
+          await Future.delayed(const Duration(milliseconds: 20));
           timeOut++;
         }
         await sub.cancel();
@@ -57,7 +59,7 @@ class _RoomScreenState extends State<RoomScreen> {
         List<String> tmp = raw.substring(0, raw.length - 1).split("\$");
         List<String> deviceTokens = tmp[0].split("#");
         List<String> sensorTokens = tmp[1].split("#");
-        deviceTokens = deviceTokens.sublist(0, deviceTokens.length - 1);
+        deviceTokens = deviceTokens.sublist(1, deviceTokens.length - 1);
         sensorTokens = sensorTokens.sublist(0, sensorTokens.length - 1);
         widget.room.devicesNames
             .addAll(deviceTokens.sublist(0, deviceTokens.length ~/ 2));
@@ -72,6 +74,7 @@ class _RoomScreenState extends State<RoomScreen> {
         }
         widget.room.channels.add(sock);
         widget.room.channelsStream.add(broadStream);
+
         int k = oldDevicesSize;
         for (int i = oldDevicesSize; i < widget.room.devicesNames.length; i++) {
           widget.room.deviceToChannel[widget.room.devicesNames[i]] =
@@ -90,7 +93,6 @@ class _RoomScreenState extends State<RoomScreen> {
         }
       }
     }
-
     return true;
   }
 
@@ -128,9 +130,8 @@ class _RoomScreenState extends State<RoomScreen> {
   }
 
   @override
-  void dispose() {
-    //widget.channel.close();
-    widget.room.dispose();
+  void dispose() async {
     super.dispose();
+    await widget.room.dispose();
   }
 }

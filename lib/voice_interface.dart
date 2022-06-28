@@ -38,6 +38,7 @@ class _VoiceInterfaceState extends State<VoiceInterface> {
         });
         speech.listen(onResult: (value) {
           if (value.finalResult) {
+            print(value.recognizedWords);
             if (widget.room.executeVoiceCommand(value.recognizedWords)) {
               widget.room.switchesBoxSetState!(() {});
             }

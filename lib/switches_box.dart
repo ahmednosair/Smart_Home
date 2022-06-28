@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import 'room.dart';
 
-
 class SwitchesBox extends StatefulWidget {
   final Room room;
 
@@ -17,21 +16,36 @@ class SwitchesBox extends StatefulWidget {
 }
 
 class _SwitchesBoxState extends State<SwitchesBox> {
+  final List<StreamSubscription> subs = [];
+  final List<StringBuffer> buffs = [];
+
   _SwitchesBoxState(Room room) {
     room.switchesBoxSetState = setState;
     for (Stream stream in room.channelsStream) {
-      stream.listen((event) {
+      buffs.add(StringBuffer());
+      final int index = buffs.length - 1;
+      StreamSubscription sub = stream.listen((event) {
         String raw = const AsciiDecoder().convert(event);
-        //uncompleted command to be handled (\n)
-        List<String> tokens = raw.substring(0, raw.length - 1).split("#");
-        if (tokens[0] != "device") {
+        if(!raw.contains("device")){
           return;
         }
-        setState(() {
-          room.switchState[room.deviceToIndex[tokens[1]] as int] =
-          (tokens[2] == "ON");
-        });
+        buffs[index].write(raw);
+        String str = buffs[index].toString();
+        if (str.contains("\n")) {
+          List<String> splits = str.split("\n");
+          buffs[index].clear();
+          buffs[index].write(splits[splits.length - 1]);
+          for (int i = 0; i < splits.length - 1; i++) {
+            List<String> tokens =
+                splits[i].split("#");
+            setState(() {
+              room.switchState[room.deviceToIndex[tokens[1]] as int] =
+                  (tokens[2] == "ON");
+            });
+          }
+        }
       });
+      subs.add(sub);
     }
   }
 
@@ -44,11 +58,11 @@ class _SwitchesBoxState extends State<SwitchesBox> {
     );
   }
 
-  String spacePad(String input){
+  String spacePad(String input) {
     int len = 12;
     StringBuffer buff = StringBuffer();
     buff.write(input);
-    while(buff.length<len){
+    while (buff.length < len) {
       buff.write(' ');
     }
     return buff.toString();
@@ -84,9 +98,19 @@ class _SwitchesBoxState extends State<SwitchesBox> {
           ],
         ),
       ));
-      rows.add(const SizedBox(height: 10,));
+      rows.add(const SizedBox(
+        height: 10,
+      ));
       index++;
     }
     return rows;
+  }
+
+  @override
+  void dispose() async {
+    super.dispose();
+    for (StreamSubscription sub in subs) {
+      await sub.cancel();
+    }
   }
 }
