@@ -18,15 +18,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  TextEditingController roomName = TextEditingController();
-  TextEditingController roomIPs = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Smart Home"),
-      ),
       body: GridView(
         gridDelegate:
         const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
