@@ -15,7 +15,7 @@ class Room {
   List<bool> switchState = [];
   List<Stream> channelsStream = [];
   void Function(void Function())? switchesBoxSetState;
-
+  bool initialized = false;
   //String temperature = "";
   List<String> sensorsNames = [];
   List<String> sensorsValues = [];
@@ -152,5 +152,6 @@ class Room {
     channels.clear();
     deviceToChannel.clear();
     channelsStream.clear();
+    initialized = false;
   }
 }

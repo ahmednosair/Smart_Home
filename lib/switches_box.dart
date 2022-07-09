@@ -11,7 +11,7 @@ class SwitchesBox extends StatefulWidget {
 
   @override
   _SwitchesBoxState createState() {
-    return _SwitchesBoxState(room);
+    return _SwitchesBoxState();
   }
 }
 
@@ -19,9 +19,11 @@ class _SwitchesBoxState extends State<SwitchesBox> {
   final List<StreamSubscription> subs = [];
   final List<StringBuffer> buffs = [];
 
-  _SwitchesBoxState(Room room) {
-    room.switchesBoxSetState = setState;
-    for (Stream stream in room.channelsStream) {
+  @override
+  void initState() {
+    super.initState();
+    widget.room.switchesBoxSetState = setState;
+    for (Stream stream in widget.room.channelsStream) {
       buffs.add(StringBuffer());
       final int index = buffs.length - 1;
       StreamSubscription sub = stream.listen((event) {
@@ -37,10 +39,10 @@ class _SwitchesBoxState extends State<SwitchesBox> {
           buffs[index].write(splits[splits.length - 1]);
           for (int i = 0; i < splits.length - 1; i++) {
             List<String> tokens =
-                splits[i].split("#");
+            splits[i].split("#");
             setState(() {
-              room.switchState[room.deviceToIndex[tokens[1]] as int] =
-                  (tokens[2] == "ON");
+              widget.room.switchState[widget.room.deviceToIndex[tokens[1]] as int] =
+              (tokens[2] == "ON");
             });
           }
         }

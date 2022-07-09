@@ -21,7 +21,7 @@ class RoomScreen extends StatefulWidget {
 }
 
 class _RoomScreenState extends State<RoomScreen> {
-  Future<bool> initializeRoom() async {
+  void initializeRoom() async {
     widget.room.devicesNames.clear();
     widget.room.switchState.clear();
     widget.room.channels.clear();
@@ -47,7 +47,7 @@ class _RoomScreenState extends State<RoomScreen> {
           }
         });
         int timeOut = 0;
-        while (!done && timeOut < 5) {
+        while (!done && timeOut < 10) {
           await Future.delayed(const Duration(milliseconds: 20));
           timeOut++;
         }
@@ -76,7 +76,6 @@ class _RoomScreenState extends State<RoomScreen> {
         }
         widget.room.channels.add(sock);
         widget.room.channelsStream.add(broadStream);
-
         int k = oldDevicesSize;
         for (int i = oldDevicesSize; i < widget.room.devicesNames.length; i++) {
           widget.room.deviceToChannel[widget.room.devicesNames[i]] =
@@ -95,7 +94,17 @@ class _RoomScreenState extends State<RoomScreen> {
         }
       }
     }
-    return true;
+    print("HELLLO");
+    setState(() {
+      widget.room.initialized = true;
+    });
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 200),initializeRoom);
   }
 
   @override
@@ -105,11 +114,8 @@ class _RoomScreenState extends State<RoomScreen> {
         title: Text(widget.room.roomName),
       ),
       body: Center(
-        child: FutureBuilder(
-          future: initializeRoom(),
-          builder: (context, snapshot) {
-            if (snapshot.hasData) {
-              return SingleChildScrollView(
+        child: widget.room.initialized
+            ? SingleChildScrollView(
                 child: Column(
                   children: [
                     SwitchesBox(room: widget.room),
@@ -120,12 +126,8 @@ class _RoomScreenState extends State<RoomScreen> {
                   ],
                   mainAxisAlignment: MainAxisAlignment.center,
                 ),
-              );
-            } else {
-              return Column();
-            }
-          },
-        ),
+              )
+            : null,
       ),
       bottomNavigationBar: VoiceInterface(room: widget.room),
     );

@@ -7,11 +7,13 @@ import 'room.dart';
 class SensorsBox extends StatefulWidget {
   final Room room;
 
-  SensorsBox({Key? key, required this.room}) : super(key: key);
+  SensorsBox({Key? key, required this.room}) : super(key: key) {
+    print("New Sensor BOx");
+  }
 
   @override
   State<StatefulWidget> createState() {
-    return _SensorBoxState(room);
+    return _SensorBoxState();
   }
 }
 
@@ -20,14 +22,19 @@ class _SensorBoxState extends State<SensorsBox> {
   final List<StreamSubscription> subs = [];
   final List<StringBuffer> buffs = [];
 
-  _SensorBoxState(Room room) {
-    for (String sensor in room.sensorsNames) {
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    print(widget.room.sensorsNames.length);
+    for (String sensor in widget.room.sensorsNames) {
+      print("BLA");
       controllers.add(TextEditingController());
-      controllers[room.sensorToIndex[sensor] as int].text =
-          room.sensorsValues[room.sensorToIndex[sensor] as int];
+      controllers[widget.room.sensorToIndex[sensor] as int].text =
+      widget.room.sensorsValues[widget.room.sensorToIndex[sensor] as int];
     }
     //temperature.text = room.temperature;
-    for (Stream stream in room.channelsStream) {
+    for (Stream stream in widget.room.channelsStream) {
       buffs.add(StringBuffer());
       final int index = buffs.length - 1;
       subs.add(stream.listen((event) {
@@ -43,7 +50,7 @@ class _SensorBoxState extends State<SensorsBox> {
           buffs[index].write(splits[splits.length - 1]);
           for (int i = 0; i < splits.length - 1; i++) {
             List<String> tokens = splits[i].split("#");
-            controllers[room.sensorToIndex[tokens[1]] as int].text = tokens[2];
+            controllers[widget.room.sensorToIndex[tokens[1]] as int].text = tokens[2];
           }
         }
       }));
@@ -52,6 +59,7 @@ class _SensorBoxState extends State<SensorsBox> {
 
   @override
   Widget build(BuildContext context) {
+    print("DA");
     return Column(
       //    mainAxisAlignment: MainAxisAlignment.center,
 //      mainAxisSize: MainAxisSize.min,
