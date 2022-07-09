@@ -148,6 +148,7 @@ class Room {
     switchState.clear();
     sensorsNames.clear();
     sensorsValues.clear();
+    sensorToIndex.clear();
     channels.clear();
     deviceToChannel.clear();
     channelsStream.clear();

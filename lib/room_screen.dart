@@ -29,16 +29,17 @@ class _RoomScreenState extends State<RoomScreen> {
     widget.room.channelsStream.clear();
     widget.room.sensorsNames.clear();
     widget.room.sensorsValues.clear();
+    widget.room.sensorToIndex.clear();
     //load devices for each module
+    print("ips len: " + widget.room.channelsIPs.length.toString());
     for (String ip in widget.room.channelsIPs) {
       int oldDevicesSize = widget.room.devicesNames.length;
       try {
         Socket sock = await Socket.connect(ip, 80);
-
         StringBuffer response = StringBuffer();
         bool done = false;
         Stream broadStream = sock.asBroadcastStream();
-        StreamSubscription sub =  broadStream.listen((event) {
+        StreamSubscription sub = broadStream.listen((event) {
           String s = const AsciiDecoder().convert(event);
           response.write(s);
           if (s.codeUnitAt(s.length - 1) == '\n'.codeUnitAt(0)) {
@@ -66,6 +67,7 @@ class _RoomScreenState extends State<RoomScreen> {
         List<String> rawStates = deviceTokens.sublist(deviceTokens.length ~/ 2);
         widget.room.sensorsNames
             .addAll(sensorTokens.sublist(0, sensorTokens.length ~/ 2));
+
         widget.room.sensorsValues
             .addAll(sensorTokens.sublist(sensorTokens.length ~/ 2));
 

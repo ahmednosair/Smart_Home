@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:graduation_project/config_page.dart';
 import 'package:network_info_plus/network_info_plus.dart';
-import 'package:path_provider/path_provider.dart';
 
 import 'home_page.dart';
 import 'room.dart';
@@ -12,7 +11,7 @@ import 'room.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
@@ -24,63 +23,85 @@ class MyApp extends StatefulWidget {
   }
 }
 
-class _MyAppState extends State<MyApp> {
-  Future<List<Room>> loadRooms() async {
-    final ipReg =
-        RegExp(r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}$');
-    List<Room> rooms = [];
-    Map<String, int> roomNameToIndex = {};
-    await (NetworkInfo().getWifiIP()).then(
-      (ip) async {
-        final String subnet = ip!.substring(0, ip.lastIndexOf('.'));
-        const port = 80;
-        for (var i = 100; i < 103; i++) {
-          String ip = '$subnet.$i';
-          await Socket.connect(ip, port, timeout: Duration(milliseconds: 100))
-              .then((socket) async {
-            StringBuffer response = StringBuffer();
-            bool done = false;
-            StreamSubscription sub = socket.listen((event) {
-              String s = const AsciiDecoder().convert(event);
-              response.write(s);
-              if (s.contains("#")) {
-                done = true;
-              }
-            });
-            int timeOut = 0;
-            while (!done && timeOut < 10) {
-              await Future.delayed(const Duration(milliseconds: 10));
-              timeOut++;
-            }
-            print(done);
-            print(timeOut);
-            await sub.cancel();
-            String raw = response.toString();
-            if (raw.isEmpty) {
-              socket.close();
-              return;
-            }
-            socket.close();
-            String roomName = raw.split("#")[0];
-            print(roomName);
-            int roomIndex;
-            if (roomNameToIndex.containsKey(roomName)) {
-              roomIndex = roomNameToIndex[roomName]!;
-            } else {
-              rooms.add(Room(roomName));
-              roomIndex = rooms.length - 1;
-              roomNameToIndex[roomName] = roomIndex;
-            }
-            rooms[roomIndex].channelsIPs.add(ip);
-          }).catchError((error) => null);
-        }
-      },
-    );
-    print('Done');
-    return rooms;
-    /*Room room = Room("Bedroom 1");
-  room.channelsIPs.add("192.168.1.101");
-  return [room];*/
+class _MyAppState extends State<MyApp> with TickerProviderStateMixin {
+  List<Room> rooms = [];
+  Map<String, int> roomNameToIndex = {};
+  late TabController _tabController;
+
+  _MyAppState() {
+    loadRooms();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if(_tabController.index==0&&_tabController.indexIsChanging){
+        Future.delayed(const Duration(milliseconds: 500),loadRooms);
+      }
+    });
+  }
+
+  void ping(String ip, int port) async {
+    Socket socket;
+    try {
+      socket =
+          await Socket.connect(ip, port, timeout: const Duration(seconds: 4));
+    } catch (e) {
+      return;
+    }
+    StringBuffer response = StringBuffer();
+    bool done = false;
+    StreamSubscription sub = socket.listen((event) {
+      String s = const AsciiDecoder().convert(event);
+      response.write(s);
+      if (s.contains("#")) {
+        done = true;
+      }
+    });
+    int timeOut = 0;
+    while (!done && timeOut < 50) {
+      await Future.delayed(const Duration(milliseconds: 10));
+      timeOut++;
+    }
+    print(done);
+    print(timeOut);
+    await sub.cancel();
+    String raw = response.toString();
+    if (raw.isEmpty) {
+      socket.close();
+      return;
+    }
+    socket.close();
+    String roomName = raw.split("#")[0];
+    print(roomName);
+    int roomIndex;
+    setState(() {
+      if (roomNameToIndex.containsKey(roomName)) {
+        roomIndex = roomNameToIndex[roomName]!;
+      } else {
+        rooms.add(Room(roomName));
+        roomIndex = rooms.length - 1;
+        roomNameToIndex[roomName] = roomIndex;
+      }
+      print(ip);
+      rooms[roomIndex].channelsIPs.add(ip);
+    });
+  }
+
+  void loadRooms() async {
+    roomNameToIndex.clear();
+    rooms.clear();
+
+    String? ipRng = await (NetworkInfo().getWifiIP());
+    final String
+        subnet = /*ipRng!.substring(0, ipRng.lastIndexOf('.'));*/ "192.168.1";
+    const port = 80;
+    for (int i = 2; i < 255; i++) {
+      String ip = '$subnet.$i';
+      ping(ip, port);
+    }
   }
 
   @override
@@ -88,36 +109,25 @@ class _MyAppState extends State<MyApp> {
     const title = 'Smart Home';
     return MaterialApp(
       title: title,
-      home: DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          appBar: AppBar(
-            bottom: const TabBar(
-              tabs: [
-                Tab(
-                  icon: Icon(Icons.home),
-                ),
-                Tab(icon: Icon(Icons.settings)),
-              ],
-            ),
-            title: const Text('Smart Home'),
-          ),
-          body: TabBarView(
-            children: [
-              FutureBuilder(
-                future: loadRooms(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    return HomePage(
-                      rooms: snapshot.data as List<Room>,
-                    );
-                  }
-                  return HomePage(rooms: []);
-                },
+      home: Scaffold(
+        appBar: AppBar(
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(
+                icon: Icon(Icons.home),
               ),
-              ConfigPage(myAppSetState: setState),
+              Tab(icon: Icon(Icons.settings)),
             ],
           ),
+          title: const Text('Smart Home'),
+        ),
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            HomePage(rooms: rooms),
+            ConfigPage(refreshRooms: loadRooms),
+          ],
         ),
       ),
     );

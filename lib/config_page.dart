@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 class ConfigPage extends StatefulWidget {
-  final void Function(void Function()) myAppSetState;
+  final void Function() refreshRooms;
 
-  const ConfigPage({Key? key, required this.myAppSetState}) : super(key: key);
+  const ConfigPage({Key? key, required this.refreshRooms}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -45,7 +46,7 @@ class _ConfigPageState extends State<ConfigPage> {
                 if (value != null && value.length > 50) {
                   return "Enter max. 50 characters";
                 } else if (value != null && value.isEmpty) {
-                  return "Enter WiFi name";
+                  return "WiFi name required";
                 } else {
                   return null;
                 }
@@ -78,7 +79,7 @@ class _ConfigPageState extends State<ConfigPage> {
                 if (value != null && value.length > 50) {
                   return "Enter max. 50 characters";
                 } else if (value != null && value.isEmpty) {
-                  return "Enter WiFi password";
+                  return "WiFi password required";
                 } else {
                   return null;
                 }
@@ -99,7 +100,7 @@ class _ConfigPageState extends State<ConfigPage> {
                 if (value != null && value.length > 40) {
                   return "Enter max. 40 characters";
                 } else if (value != null && value.isEmpty) {
-                  return "Enter room name";
+                  return "Room name required";
                 } else {
                   return null;
                 }
@@ -263,7 +264,8 @@ class _ConfigPageState extends State<ConfigPage> {
           dev4 +
           "#");
       sock.close();
-      Future.delayed(Duration(seconds: 7),(){
+      Future.delayed(const Duration(seconds: 7),(){
+        widget.refreshRooms();
         Navigator.of(context).pop();
         showDialog<String>(
           context: context,
@@ -278,11 +280,8 @@ class _ConfigPageState extends State<ConfigPage> {
             ],
           ),
         );
-        widget.myAppSetState(() {
-        });
+
       });
-
-
 
       //Received
     }).onError((error, stackTrace){

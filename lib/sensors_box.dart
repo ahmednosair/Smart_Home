@@ -11,7 +11,6 @@ class SensorsBox extends StatefulWidget {
 
   @override
   State<StatefulWidget> createState() {
-    // TODO: implement createState
     return _SensorBoxState(room);
   }
 }

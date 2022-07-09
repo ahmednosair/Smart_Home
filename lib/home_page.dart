@@ -55,26 +55,6 @@ class _HomePageState extends State<HomePage> {
   }
 
 
-  void updateRoomsFile(Room room) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final File file = File('${directory.path}/rooms.txt');
-    await file.writeAsString(room.roomName + "#", mode: FileMode.append);
-    for (String ip in room.channelsIPs) {
-      await file.writeAsString(ip + "#", mode: FileMode.append);
-    }
-  }
-
-  void saveRoomsFile() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final File file = File('${directory.path}/rooms.txt');
-    await file.delete();
-    for (Room room in widget.rooms) {
-      await file.writeAsString(room.roomName + "#", mode: FileMode.append);
-      for (String ip in room.channelsIPs) {
-        await file.writeAsString(ip + "#", mode: FileMode.append);
-      }
-    }
-  }
 
   showAlertDialog(BuildContext context, String button1, String button2,
       String msg, Function()? button1OnPressed, Function()? button2OnPressed) {
