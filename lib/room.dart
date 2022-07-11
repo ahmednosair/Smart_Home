@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-
 class Room {
   String image = "";
   String roomName = "";
@@ -16,7 +15,6 @@ class Room {
   List<Stream> channelsStream = [];
   void Function(void Function())? switchesBoxSetState;
   bool initialized = false;
-  //String temperature = "";
   List<String> sensorsNames = [];
   List<String> sensorsValues = [];
   Map<String, int> sensorToIndex = {};
@@ -25,11 +23,13 @@ class Room {
     roomName = name;
     image = assignImg(name);
   }
-  void updateRoomDetails(String name, List<String> ips){
+
+  void updateRoomDetails(String name, List<String> ips) {
     roomName = name;
     image = assignImg(name);
     channelsIPs = ips;
   }
+
   String assignImg(String name) {
     String img = "icons/living_room.png";
     if (name.isEmpty) {
@@ -50,10 +50,15 @@ class Room {
     return img;
   }
 
-  void sendCommand(String device, String command) {
+  Future<bool> sendCommand(String device, String command) async {
     int index = deviceToChannel[device] as int;
-
-    channels[index].write(device + "#" + command + "\n");
+    try {
+      channels[index].write(device + "#" + command + "\n");
+      await (channels[index].flush());
+    } catch (e) {
+      return false;
+    }
+    return true;
   }
 
   String literalToNum(String literal) {
@@ -85,11 +90,11 @@ class Room {
     }
   }
 
-  bool executeVoiceCommand(String command) {
+  Future<String> executeVoiceCommand(String command) async {
     String raw = command.toLowerCase();
     List<String> tokens = raw.split(" ");
     if (tokens.length < 2) {
-      return false;
+      return "Wrong command.\nAllowed commands are turn on or turn off followed by the device name.";
     }
     String cmd = tokens[0] + tokens[1];
     switch (cmd) {
@@ -100,7 +105,7 @@ class Room {
         cmd = "OFF";
         break;
       default:
-        return false;
+        return "Wrong command.\nAllowed commands are turn on or turn off followed by the device name.";
     }
     String dev = "";
     for (int i = 2; i < tokens.length; i++) {
@@ -117,31 +122,24 @@ class Room {
       }
     }
     if (dev == rawDev) {
-      return false;
+      return "Unknown device";
     }
-    sendCommand(dev, cmd);
-    switchState[deviceToIndex[dev] as int] = (cmd == "ON");
-    return true;
+    bool success = await sendCommand(dev, cmd);
+    if (success) {
+      switchState[deviceToIndex[dev] as int] = (cmd == "ON");
+      return "";
+    }
+    return "Can't send command to the module\nPlease sure that you are connected to the WiFi or try to restart the application";
   }
 
-  String getIPs(){
-    StringBuffer buffer = StringBuffer();
-    for(String ip in channelsIPs){
-      buffer.write(ip);
-      buffer.write("\n");
-    }
-    String result = buffer.toString();
-    return result.substring(0,result.length-1);
-  }
-
-  Future<void> dispose() async {
-    try {
-      for (Socket socket in channels) {
-        await socket.close();
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print(e);
+  void dispose() async {
+    for (Socket socket in channels) {
+      try {
+        socket.close();
+      } catch (e) {
+        if (kDebugMode) {
+          print("Closing a bad socket");
+        }
       }
     }
     devicesNames.clear();

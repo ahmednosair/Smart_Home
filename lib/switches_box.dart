@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'room.dart';
@@ -28,7 +29,7 @@ class _SwitchesBoxState extends State<SwitchesBox> {
       final int index = buffs.length - 1;
       StreamSubscription sub = stream.listen((event) {
         String raw = const AsciiDecoder().convert(event);
-        if(!raw.contains("device")){
+        if (!raw.contains("device")) {
           return;
         }
         buffs[index].write(raw);
@@ -38,14 +39,30 @@ class _SwitchesBoxState extends State<SwitchesBox> {
           buffs[index].clear();
           buffs[index].write(splits[splits.length - 1]);
           for (int i = 0; i < splits.length - 1; i++) {
-            List<String> tokens =
-            splits[i].split("#");
+            List<String> tokens = splits[i].split("#");
             setState(() {
-              widget.room.switchState[widget.room.deviceToIndex[tokens[1]] as int] =
-              (tokens[2] == "ON");
+              widget.room.switchState[widget.room.deviceToIndex[tokens[1]]
+                  as int] = (tokens[2] == "ON");
             });
           }
         }
+      },onError: (error){
+        if (kDebugMode) {
+          print("Module devices socket disconnected");
+        }
+        showDialog<String>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: const Text('Error'),
+            content: const Text("Module disconnected"),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'OK'),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       });
       subs.add(sub);
     }
@@ -60,16 +77,6 @@ class _SwitchesBoxState extends State<SwitchesBox> {
     );
   }
 
-  String spacePad(String input) {
-    int len = 12;
-    StringBuffer buff = StringBuffer();
-    buff.write(input);
-    while (buff.length < len) {
-      buff.write(' ');
-    }
-    return buff.toString();
-  }
-
   List<Widget> getChildren() {
     List<Widget> rows = [];
     int index = 0;
@@ -81,18 +88,60 @@ class _SwitchesBoxState extends State<SwitchesBox> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(spacePad(device)),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 80),
+              child: Text(
+                (device),
+                textAlign: TextAlign.center,
+              ),
+            ),
             Switch(
               value: widget.room.switchState[curr],
-              onChanged: (value) {
+              onChanged: (value)async {
+                final Future<bool> success;
                 if (value) {
-                  widget.room.sendCommand(currDevice, "ON");
+                  success =  widget.room.sendCommand(currDevice, "ON");
                 } else {
-                  widget.room.sendCommand(currDevice, "OFF");
+                  success =  widget.room.sendCommand(currDevice, "OFF");
                 }
-                setState(() {
-                  widget.room.switchState[curr] = value;
+                success.then((success) {
+                  if (success) {
+                    setState(() {
+                      widget.room.switchState[curr] = value;
+                    });
+                  } else {
+                    showDialog<String>(
+                      context: context,
+                      builder: (BuildContext context) => AlertDialog(
+                        title: const Text('Error'),
+                        content: const Text(
+                            "Can't send command to the module\nPlease sure that you are connected to the WiFi or try to restart the application"),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, 'OK'),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                }).timeout(const Duration(seconds: 2),onTimeout: (){
+                  showDialog<String>(
+                    context: context,
+                    builder: (BuildContext context) => AlertDialog(
+                      title: const Text('Error'),
+                      content: const Text(
+                          "Can't send command to the module\nPlease sure that you are connected to the WiFi or try to restart the application"),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, 'OK'),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
                 });
+
               },
               activeTrackColor: Colors.lightGreenAccent,
               activeColor: Colors.green,
@@ -101,7 +150,7 @@ class _SwitchesBoxState extends State<SwitchesBox> {
         ),
       ));
       rows.add(const SizedBox(
-        height: 10,
+        height: 20,
       ));
       index++;
     }

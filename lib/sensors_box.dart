@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'room.dart';
@@ -7,9 +8,7 @@ import 'room.dart';
 class SensorsBox extends StatefulWidget {
   final Room room;
 
-  SensorsBox({Key? key, required this.room}) : super(key: key) {
-    print("New Sensor BOx");
-  }
+  const SensorsBox({Key? key, required this.room}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -24,16 +23,12 @@ class _SensorBoxState extends State<SensorsBox> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    print(widget.room.sensorsNames.length);
     for (String sensor in widget.room.sensorsNames) {
-      print("BLA");
       controllers.add(TextEditingController());
       controllers[widget.room.sensorToIndex[sensor] as int].text =
-      widget.room.sensorsValues[widget.room.sensorToIndex[sensor] as int];
+          widget.room.sensorsValues[widget.room.sensorToIndex[sensor] as int];
     }
-    //temperature.text = room.temperature;
     for (Stream stream in widget.room.channelsStream) {
       buffs.add(StringBuffer());
       final int index = buffs.length - 1;
@@ -50,8 +45,13 @@ class _SensorBoxState extends State<SensorsBox> {
           buffs[index].write(splits[splits.length - 1]);
           for (int i = 0; i < splits.length - 1; i++) {
             List<String> tokens = splits[i].split("#");
-            controllers[widget.room.sensorToIndex[tokens[1]] as int].text = tokens[2];
+            controllers[widget.room.sensorToIndex[tokens[1]] as int].text =
+                tokens[2];
           }
+        }
+      }, onError: (error) {
+        if (kDebugMode) {
+          print("Module sensors socket disconnected");
         }
       }));
     }
@@ -59,10 +59,7 @@ class _SensorBoxState extends State<SensorsBox> {
 
   @override
   Widget build(BuildContext context) {
-    print("DA");
     return Column(
-      //    mainAxisAlignment: MainAxisAlignment.center,
-//      mainAxisSize: MainAxisSize.min,
       children: getSensors(),
     );
   }

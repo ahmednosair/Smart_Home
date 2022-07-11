@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 
 import 'home_button.dart';
 import 'room.dart';
@@ -8,8 +6,8 @@ import 'room_screen.dart';
 
 class HomePage extends StatefulWidget {
   final List<Room> rooms;
-
-  const HomePage({Key? key, required this.rooms}) : super(key: key);
+  final Function() loadRooms;
+  const HomePage({Key? key, required this.rooms, required this.loadRooms}) : super(key: key);
 
   @override
   _HomePageState createState() {
@@ -44,7 +42,7 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
                 builder: (context) => RoomScreen(
-                  room: room,
+                  room: room,loadRooms:widget.loadRooms,
                 )),
           );
         },
@@ -54,32 +52,4 @@ class _HomePageState extends State<HomePage> {
     return buttons;
   }
 
-
-
-  showAlertDialog(BuildContext context, String button1, String button2,
-      String msg, Function()? button1OnPressed, Function()? button2OnPressed) {
-    Widget cancelButton = TextButton(
-      child: Text(button1),
-      onPressed: button1OnPressed,
-    );
-    Widget continueButton = TextButton(
-      child: Text(button2),
-      onPressed: button2OnPressed,
-    );
-
-    AlertDialog alert = AlertDialog(
-      title: const Text("Confirmation"),
-      content: Text(msg),
-      actions: [
-        cancelButton,
-        continueButton,
-      ],
-    );
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return alert;
-      },
-    );
-  }
 }

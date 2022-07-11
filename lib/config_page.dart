@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 class ConfigPage extends StatefulWidget {
@@ -224,7 +222,6 @@ class _ConfigPageState extends State<ConfigPage> {
 
   void configure() {
     showDialog(
-      // The user CANNOT close this dialog  by pressing outsite it
         barrierDismissible: false,
         context: context,
         builder: (_) {
@@ -286,7 +283,6 @@ class _ConfigPageState extends State<ConfigPage> {
       //Received
     }).onError((error, stackTrace){
       //Make Sure
-      print("A");
       Navigator.of(context).pop();
       showDialog<String>(
         context: context,
@@ -301,9 +297,7 @@ class _ConfigPageState extends State<ConfigPage> {
           ],
         ),
       );
-    }).catchError((error){print("LA");});
+    });
 
-    // print(value);
-    //value.write("Bedroom 1#Thunderbolt#AHmedZAza@12345#\n");
   }
 }
