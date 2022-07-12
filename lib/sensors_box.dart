@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'room.dart';
@@ -24,37 +22,7 @@ class _SensorBoxState extends State<SensorsBox> {
   @override
   void initState() {
     super.initState();
-    for (String sensor in widget.room.sensorsNames) {
-      controllers.add(TextEditingController());
-      controllers[widget.room.sensorToIndex[sensor] as int].text =
-          widget.room.sensorsValues[widget.room.sensorToIndex[sensor] as int];
-    }
-    for (Stream stream in widget.room.channelsStream) {
-      buffs.add(StringBuffer());
-      final int index = buffs.length - 1;
-      subs.add(stream.listen((event) {
-        String raw = const AsciiDecoder().convert(event);
-        if (!raw.contains("sensor")) {
-          return;
-        }
-        buffs[index].write(raw);
-        String str = buffs[index].toString();
-        if (str.contains("\n")) {
-          List<String> splits = str.split("\n");
-          buffs[index].clear();
-          buffs[index].write(splits[splits.length - 1]);
-          for (int i = 0; i < splits.length - 1; i++) {
-            List<String> tokens = splits[i].split("#");
-            controllers[widget.room.sensorToIndex[tokens[1]] as int].text =
-                tokens[2];
-          }
-        }
-      }, onError: (error) {
-        if (kDebugMode) {
-          print("Module sensors socket disconnected");
-        }
-      }));
-    }
+    widget.room.sensorBoxSetState = setState;
   }
 
   @override
@@ -69,21 +37,20 @@ class _SensorBoxState extends State<SensorsBox> {
     for (String sensor in widget.room.sensorsNames) {
       rows.add(Row(
         children: [
-          Flexible(
-            child: Text(
+          Text(
               sensor,
-              style: const TextStyle(fontSize: 22),
-            ),
-            flex: 3,
-          ),
-          Flexible(
-            child: TextField(
+              style: const TextStyle(fontSize: 24),
+            ),const SizedBox(width: 35,),
+
+          DecoratedBox(
+            decoration: BoxDecoration(border: Border.all(width: 3),borderRadius: BorderRadius.circular(20)),
+            child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 85,minHeight: 50),
+            child: Center(child:Text(
+              widget
+                  .room.sensorsValues[widget.room.sensorToIndex[sensor] as int],
               textAlign: TextAlign.center,
-              controller: controllers[widget.room.sensorToIndex[sensor] as int],
-              readOnly: true,
-              style: const TextStyle(fontSize: 22),
-            ),
-            flex: 1,
+              style: const TextStyle(fontSize: 24),
+            )),),
           ),
         ],
         mainAxisAlignment: MainAxisAlignment.center,
@@ -94,11 +61,8 @@ class _SensorBoxState extends State<SensorsBox> {
   }
 
   @override
-  void dispose() async {
+  void dispose() {
     super.dispose();
-
-    for (StreamSubscription sub in subs) {
-      await sub.cancel();
-    }
+    widget.room.sensorBoxSetState = null;
   }
 }

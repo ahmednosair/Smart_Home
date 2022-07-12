@@ -38,7 +38,7 @@ unsigned long lastReadingTime;
 
 WiFiClient *clients[MAX_CLIENTS] = {NULL};
 
-WiFiServer wifiServer(80);
+WiFiServer wifiServer(55555);
 
 // flag for saving data
 bool needConf = false;
@@ -108,7 +108,18 @@ void loadJsonConf() {
           } else {
             needConf = true;
           }
-
+          if (json["dev_1_state"]) {
+            dev_1_state = (strcmp(json["dev_1_state"], "1") == 0);
+          }
+          if (json["dev_2_state"]) {
+            dev_2_state = (strcmp(json["dev_2_state"], "1") == 0);
+          }
+          if (json["dev_3_state"]) {
+            dev_3_state = (strcmp(json["dev_3_state"], "1") == 0);
+          }
+          if (json["dev_4_state"]) {
+            dev_4_state = (strcmp(json["dev_4_state"], "1") == 0);
+          }
         }
         else
         {
@@ -127,7 +138,22 @@ void loadJsonConf() {
 void setup()
 {
   Serial.begin(115200);
+  pinMode(dev_1_pin, OUTPUT);
+  pinMode(dev_2_pin, OUTPUT);
+  pinMode(dev_3_pin, OUTPUT);
+  pinMode(dev_4_pin, OUTPUT);
+  pinMode(rst, INPUT);
+  pinMode(dev_1_manual, INPUT);
+  pinMode(dev_2_manual, INPUT);
+  pinMode(dev_3_manual, INPUT);
+  pinMode(dev_4_manual, INPUT);
+
   loadJsonConf();
+
+  digitalWrite(dev_1_pin, dev_1_state);
+  digitalWrite(dev_2_pin, dev_2_state);
+  digitalWrite(dev_3_pin, dev_3_state);
+  digitalWrite(dev_4_pin, dev_4_state);
   if (needConf)
   {
     WiFi.mode(WIFI_AP_STA);
@@ -137,6 +163,27 @@ void setup()
       wifiServer.begin();
       while (1)
       {
+
+        if (digitalRead(dev_1_manual) == HIGH && millis() - last_push_1 > 500) {
+          last_push_1 = millis();
+          dev_1_state = !dev_1_state;
+          digitalWrite(dev_1_pin, dev_1_state);
+        }
+        if (digitalRead(dev_2_manual) == HIGH && millis() - last_push_2 > 500) {
+          last_push_2 = millis();
+          dev_2_state = !dev_2_state;
+          digitalWrite(dev_2_pin, dev_2_state);
+        }
+        if (digitalRead(dev_3_manual) == HIGH && millis() - last_push_3 > 500) {
+          last_push_3 = millis();
+          dev_3_state = !dev_3_state;
+          digitalWrite(dev_3_pin, dev_3_state);
+        }
+        if (digitalRead(dev_4_manual) == HIGH && millis() - last_push_4 > 500) {
+          last_push_4 = millis();
+          dev_4_state = !dev_4_state;
+          digitalWrite(dev_4_pin, dev_4_state);
+        }
         WiFiClient client = wifiServer.available();
         if (client)
         {
@@ -238,20 +285,7 @@ configured: WiFi.mode(WIFI_STA);
     clearConf();
     ESP.restart();
   }
-  pinMode(dev_1_pin, OUTPUT);
-  pinMode(dev_2_pin, OUTPUT);
-  pinMode(dev_3_pin, OUTPUT);
-  pinMode(dev_4_pin, OUTPUT);
-  pinMode(rst, INPUT);
-  pinMode(dev_1_manual, INPUT);
-  pinMode(dev_2_manual, INPUT);
-  pinMode(dev_3_manual, INPUT);
-  pinMode(dev_4_manual, INPUT);
 
-  digitalWrite(dev_1_pin, dev_1_state);
-  digitalWrite(dev_2_pin, dev_2_state);
-  digitalWrite(dev_3_pin, dev_3_state);
-  digitalWrite(dev_4_pin, dev_4_state);
   lastReadingTime = millis();
   sendSensorsReading();
   wifiServer.begin();
@@ -287,13 +321,17 @@ void updateClients(String deviceName, bool newState) {
 }
 
 void sendSensorsReading() {
-
+  float vref = 3.3;
+  float resolution = vref / 1023;
   unsigned int total = 0;
   for (int n = 0; n < 32; n++ ) {
     total += analogRead (A0);
   }
   float reading = total / 32.0;
-  temperatureC = reading / 3.2226;
+  reading = (reading * resolution);
+  reading = reading * 100;
+  temperatureC = reading;
+  //temperatureC = reading / 3.2226;
   Serial.println(temperatureC);
   for (int i = 0; i < n_clients; i++) {
     if (!clients[i]->connected()) {
@@ -332,18 +370,22 @@ bool handleClient(int index) {
   String device = command.substring(0, sep);
   if (strcmp(device.c_str(), dev_1) == 0) {
     dev_1_state = value;
+    clients[index]->write("OK\n");
     updateClients(device, value);
     digitalWrite(dev_1_pin, value);
   } else if (strcmp(device.c_str(), dev_2) == 0) {
     dev_2_state = value;
+    clients[index]->write("OK\n");
     updateClients(device, value);
     digitalWrite(dev_2_pin, value);
   } else if (strcmp(device.c_str(), dev_3) == 0) {
     dev_3_state = value;
+    clients[index]->write("OK\n");
     updateClients(device, value);
     digitalWrite(dev_3_pin, value);
   } else if (strcmp(device.c_str(), dev_4) == 0) {
     dev_4_state = value;
+    clients[index]->write("OK\n");
     updateClients(device, value);
     digitalWrite(dev_4_pin, value);
   }
@@ -394,7 +436,10 @@ void clearConf() {
   {
     Serial.println("failed to open config file for writing");
   }
-
+  json["dev_1_state"] = dev_1_state ? "1" : "0";
+  json["dev_2_state"] = dev_2_state ? "1" : "0";
+  json["dev_3_state"] = dev_3_state ? "1" : "0";
+  json["dev_4_state"] = dev_4_state ? "1" : "0";
 #if defined(ARDUINOJSON_VERSION_MAJOR) && ARDUINOJSON_VERSION_MAJOR >= 6
   serializeJson(json, configFile);
 #else

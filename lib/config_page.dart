@@ -4,17 +4,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 class ConfigPage extends StatefulWidget {
-  final void Function() refreshRooms;
 
-  const ConfigPage({Key? key, required this.refreshRooms}) : super(key: key);
-
+   const ConfigPage({Key? key, required this.getLoadRooms}) : super(key: key);
+  final Function()? Function() getLoadRooms;
   @override
   State<StatefulWidget> createState() {
     return _ConfigPageState();
   }
 }
 
-class _ConfigPageState extends State<ConfigPage> {
+class _ConfigPageState extends State<ConfigPage> with AutomaticKeepAliveClientMixin{
   final formKey = GlobalKey<FormState>();
   StreamSubscription? sub ;
   String wifiName = "";
@@ -29,6 +28,7 @@ class _ConfigPageState extends State<ConfigPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       body: Form(
         autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -221,6 +221,7 @@ class _ConfigPageState extends State<ConfigPage> {
   }
 
   void configure() {
+    FocusScope.of(context).unfocus();
     showDialog(
         barrierDismissible: false,
         context: context,
@@ -245,7 +246,7 @@ class _ConfigPageState extends State<ConfigPage> {
             ),
           );
         });
-    Socket.connect("192.168.4.1", 80,timeout: const Duration(seconds: 2)).then((sock) {
+    Socket.connect("192.168.4.1", 55555,timeout: const Duration(seconds: 3)).then((sock) async{
       sock.write(roomName +
           "#" +
           wifiName +
@@ -260,9 +261,10 @@ class _ConfigPageState extends State<ConfigPage> {
           "#" +
           dev4 +
           "#");
+      await sock.flush();
       sock.close();
       Future.delayed(const Duration(seconds: 7),(){
-        widget.refreshRooms();
+        widget.getLoadRooms()!();
         Navigator.of(context).pop();
         showDialog<String>(
           context: context,
@@ -300,4 +302,7 @@ class _ConfigPageState extends State<ConfigPage> {
     });
 
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }

@@ -1,6 +1,5 @@
 import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/services.dart';
-import 'package:graduation_project/room_screen.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import 'package:flutter/material.dart';
@@ -9,8 +8,9 @@ import 'room.dart';
 
 class VoiceInterface extends StatefulWidget {
   final Room room;
+  final SpeechToText speech = SpeechToText();
 
-  const VoiceInterface({
+   VoiceInterface({
     Key? key,
     required this.room,
   }) : super(key: key);
@@ -23,25 +23,24 @@ class VoiceInterface extends StatefulWidget {
 
 class _VoiceInterfaceState extends State<VoiceInterface> {
   bool isListen = false;
-  SpeechToText speech = SpeechToText();
+@override
+  void initState() {
+   super.initState();
+    widget.speech.initialize();
+  }
 
   void listen() async {
-    await speech.initialize(onStatus: (status) {
-      if (status == "done") {
-        setState(() {
-          isListen = false;
-        });
-        speech.stop();
-      }
-    });
-
     if (!isListen) {
-      if (speech.isAvailable) {
+      if (widget.speech.isAvailable) {
         setState(() {
           isListen = true;
         });
-        speech.listen(onResult: (value) {
+        widget.speech.listen(onResult: (value) {
           if (value.finalResult) {
+            widget.speech.stop();
+            setState(() {
+              isListen = false;
+            });
             widget.room
                 .executeVoiceCommand(value.recognizedWords)
                 .then((result) {
@@ -85,19 +84,19 @@ class _VoiceInterfaceState extends State<VoiceInterface> {
       setState(() {
         isListen = false;
       });
-      speech.stop();
+      await widget.speech.stop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(autofocus: true,
+    return RawKeyboardListener(
+        autofocus: true,
         focusNode: FocusNode(),
         onKey: (event) {
-        if(event.isKeyPressed(LogicalKeyboardKey.headsetHook)){
-          listen();
-        }
-
+          if (event.isKeyPressed(LogicalKeyboardKey.headsetHook)) {
+            listen();
+          }
         },
         child: SizedBox(
           child: AvatarGlow(
@@ -117,4 +116,5 @@ class _VoiceInterfaceState extends State<VoiceInterface> {
           height: 70,
         ));
   }
+
 }

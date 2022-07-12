@@ -10,24 +10,19 @@ class Room {
   List<Socket> channels = [];
   Map<String, int> deviceToChannel = {};
   Map<String, int> deviceToIndex = {};
-  List<String> channelsIPs = [];
   List<bool> switchState = [];
-  List<Stream> channelsStream = [];
   void Function(void Function())? switchesBoxSetState;
-  bool initialized = false;
+  void Function(void Function())? sensorBoxSetState;
   List<String> sensorsNames = [];
   List<String> sensorsValues = [];
   Map<String, int> sensorToIndex = {};
+  final List<StreamSubscription> subs = [];
+  final List<StringBuffer> buffs = [];
+  final Map<int, int> ack = {};
 
   Room(String name) {
     roomName = name;
     image = assignImg(name);
-  }
-
-  void updateRoomDetails(String name, List<String> ips) {
-    roomName = name;
-    image = assignImg(name);
-    channelsIPs = ips;
   }
 
   String assignImg(String name) {
@@ -55,6 +50,15 @@ class Room {
     try {
       channels[index].write(device + "#" + command + "\n");
       await (channels[index].flush());
+      int timeOut = 0;
+      while (ack[index]! <= 0 && timeOut < 8) {
+        await Future.delayed(const Duration(seconds: 1));
+        timeOut++;
+      }
+      if (timeOut == 8) {
+        return false;
+      }
+      ack[index] = (ack[index]! - 1);
     } catch (e) {
       return false;
     }
@@ -132,6 +136,22 @@ class Room {
     return "Can't send command to the module\nPlease sure that you are connected to the WiFi or try to restart the application";
   }
 
+  void updateSwitchesBox(void Function() fo) {
+    if (switchesBoxSetState == null) {
+      fo();
+    } else {
+      switchesBoxSetState!(fo);
+    }
+  }
+
+  void updateSensorsBox(void Function() fo) {
+    if (sensorBoxSetState == null) {
+      fo();
+    } else {
+      sensorBoxSetState!(fo);
+    }
+  }
+
   void dispose() async {
     for (Socket socket in channels) {
       try {
@@ -142,6 +162,9 @@ class Room {
         }
       }
     }
+    for (StreamSubscription sub in subs) {
+      sub.cancel();
+    }
     devicesNames.clear();
     switchState.clear();
     sensorsNames.clear();
@@ -149,7 +172,8 @@ class Room {
     sensorToIndex.clear();
     channels.clear();
     deviceToChannel.clear();
-    channelsStream.clear();
-    initialized = false;
+    buffs.clear();
+    subs.clear();
+    ack.clear();
   }
 }
