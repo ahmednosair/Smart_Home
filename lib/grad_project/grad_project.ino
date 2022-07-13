@@ -264,8 +264,15 @@ configured: WiFi.mode(WIFI_STA);
   Serial.println("...");
   //Wait for WiFi to connect for a maximum timeout of 10 seconds
   int retries = 200;
-  while (WiFi.status() != WL_CONNECTED && retries)
+  while ((WiFi.status() != WL_CONNECTED && (retries || !needConf)))
   {
+    if (digitalRead(rst) == HIGH)
+    {
+      Serial.println("REST button pushed");
+      clearConf();
+      delay(1000);
+      ESP.restart();
+    }
     Serial.print(".");
     retries--;
     delay(100);
@@ -282,7 +289,9 @@ configured: WiFi.mode(WIFI_STA);
   } else {
     Serial.print("Unable to Connect to ");
     Serial.println(wifiName);
-    clearConf();
+    if (needConf) {
+      clearConf();
+    }
     ESP.restart();
   }
 

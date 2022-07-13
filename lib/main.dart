@@ -48,12 +48,12 @@ class MyApp extends StatelessWidget {
                   context: context,
                   builder: (BuildContext context) => AlertDialog(
                     title: const Text('How to use'),
-                    content: const Text(
+                    content: const SingleChildScrollView(child: Text(
                         "- Connect to the module hotspot named \"Smart Home Module\""
-                        ".\n\n- Head to the configuration tab to configure the module"
-                        ".\n\n- The home tab contains the rooms buttons"
-                        ".\n\n- Inside each room, there are devices to control and sensors readings if exist"
-                        ".\n\n- The button with mic icon can be used to control devices using voice."),
+                            ".\n\n- Head to the configuration tab to configure the module"
+                            ".\n\n- The home tab contains the rooms buttons"
+                            ".\n\n- Inside each room, there are devices to control and sensors readings if exist"
+                            ".\n\n- The button with mic icon can be used to control devices using voice."),),
                     actions: <Widget>[
                       TextButton(
                         onPressed: () => Navigator.pop(context, 'OK'),
