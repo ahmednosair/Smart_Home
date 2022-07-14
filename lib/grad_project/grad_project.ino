@@ -5,6 +5,16 @@
 #include <SPIFFS.h>
 #endif
 #include <ArduinoJson.h> //https://github.com/bblanchon/ArduinoJson*/
+#include <DoubleResetDetector.h>
+
+// Number of seconds after reset during which a
+// subseqent reset will be considered a double reset.
+#define DRD_TIMEOUT 10
+
+// RTC Memory Address for the DoubleResetDetector to use
+#define DRD_ADDRESS 0
+
+DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
 
 char room[41];
 char wifiName[51] = {0};
@@ -14,14 +24,14 @@ char dev_2[31] ;
 char dev_3[31] ;
 char dev_4[31] ;
 const int dev_1_manual = 16; //D0
-const int dev_2_manual = 5; //D1
+const int dev_2_manual = 15; //D8
 const int dev_3_manual = 4; //D2
 const int dev_4_manual = 14; //D5
 long last_push_1 = 0;
 long last_push_2 = 0;
 long last_push_3 = 0;
 long last_push_4 = 0;
-const int dev_1_pin = 2; // D4
+const int dev_1_pin = 5; // D1
 bool dev_1_state = false;
 const int dev_2_pin = 0; // D3
 bool dev_2_state = false;
@@ -29,7 +39,7 @@ const int dev_3_pin = 12; // D6
 bool dev_3_state = false;
 const int dev_4_pin = 13; // D7
 bool dev_4_state = false;
-const int rst = 15; // D8
+
 
 float temperatureC;
 const int MAX_CLIENTS = 10;
@@ -137,19 +147,27 @@ void loadJsonConf() {
 }
 void setup()
 {
+
+
   Serial.begin(115200);
   pinMode(dev_1_pin, OUTPUT);
   pinMode(dev_2_pin, OUTPUT);
   pinMode(dev_3_pin, OUTPUT);
   pinMode(dev_4_pin, OUTPUT);
-  pinMode(rst, INPUT);
   pinMode(dev_1_manual, INPUT);
   pinMode(dev_2_manual, INPUT);
   pinMode(dev_3_manual, INPUT);
   pinMode(dev_4_manual, INPUT);
 
   loadJsonConf();
-
+  if (drd.detectDoubleReset()) {
+    Serial.println("REST button pushed");
+    clearConf();
+    delay(1000);
+    ESP.restart();
+  } else {
+    Serial.println("daaa");
+  }
   digitalWrite(dev_1_pin, dev_1_state);
   digitalWrite(dev_2_pin, dev_2_state);
   digitalWrite(dev_3_pin, dev_3_state);
@@ -163,7 +181,7 @@ void setup()
       wifiServer.begin();
       while (1)
       {
-
+        drd.loop();
         if (digitalRead(dev_1_manual) == HIGH && millis() - last_push_1 > 500) {
           last_push_1 = millis();
           dev_1_state = !dev_1_state;
@@ -266,13 +284,7 @@ configured: WiFi.mode(WIFI_STA);
   int retries = 200;
   while ((WiFi.status() != WL_CONNECTED && (retries || !needConf)))
   {
-    if (digitalRead(rst) == HIGH)
-    {
-      Serial.println("REST button pushed");
-      clearConf();
-      delay(1000);
-      ESP.restart();
-    }
+    drd.loop();
     Serial.print(".");
     retries--;
     delay(100);
@@ -322,10 +334,12 @@ void removeClient(int index) {
   n_clients--;
 }
 
-void updateClients(String deviceName, bool newState) {
+void updateClients(String deviceName, bool newState, int origin) {
   String command = newState ? "ON" : "OFF" ;
   for (int i = 0 ; i < n_clients ; i++) {
-    clients[i]->write(("device#" + deviceName + "#" + command + "\n").c_str());
+    if (i != origin) {
+      clients[i]->write(("device#" + deviceName + "#" + command + "\n").c_str());
+    }
   }
 }
 
@@ -337,10 +351,7 @@ void sendSensorsReading() {
     total += analogRead (A0);
   }
   float reading = total / 32.0;
-  reading = (reading * resolution);
-  reading = reading * 100;
-  temperatureC = reading;
-  //temperatureC = reading / 3.2226;
+  temperatureC = reading / 3.2226;
   Serial.println(temperatureC);
   for (int i = 0; i < n_clients; i++) {
     if (!clients[i]->connected()) {
@@ -348,7 +359,7 @@ void sendSensorsReading() {
       i--;
       continue;
     }
-    clients[i]->write((String("sensor#") + "Temperature#" + ((int)round(temperatureC)) + "\n").c_str());
+    clients[i]->write((String("sensor#") + "Temperature#" + ((int)round(temperatureC)) + "°C\n").c_str());
   }
 }
 
@@ -380,22 +391,22 @@ bool handleClient(int index) {
   if (strcmp(device.c_str(), dev_1) == 0) {
     dev_1_state = value;
     clients[index]->write("OK\n");
-    updateClients(device, value);
+    updateClients(device, value, index);
     digitalWrite(dev_1_pin, value);
   } else if (strcmp(device.c_str(), dev_2) == 0) {
     dev_2_state = value;
     clients[index]->write("OK\n");
-    updateClients(device, value);
+    updateClients(device, value, index);
     digitalWrite(dev_2_pin, value);
   } else if (strcmp(device.c_str(), dev_3) == 0) {
     dev_3_state = value;
     clients[index]->write("OK\n");
-    updateClients(device, value);
+    updateClients(device, value, index);
     digitalWrite(dev_3_pin, value);
   } else if (strcmp(device.c_str(), dev_4) == 0) {
     dev_4_state = value;
     clients[index]->write("OK\n");
-    updateClients(device, value);
+    updateClients(device, value, index);
     digitalWrite(dev_4_pin, value);
   }
   return true;
@@ -421,7 +432,7 @@ String initializeClient() {
   msg.concat(dev_4_state ? "ON#" : "OFF#");
   msg.concat("$");
   msg.concat("Temperature#");
-  msg.concat(String((int)round(temperatureC)) + "#");
+  msg.concat(String((int)round(temperatureC)) + "°C#");
   msg.concat("\n");
   Serial.println(msg);
   return msg;
@@ -458,35 +469,29 @@ void clearConf() {
 }
 
 void loop() {
-  if (digitalRead(rst) == HIGH)
-  {
-    Serial.println("REST button pushed");
-    clearConf();
-    delay(1000);
-    ESP.restart();
-  }
+  drd.loop();
   if (digitalRead(dev_1_manual) == HIGH && millis() - last_push_1 > 500) {
     last_push_1 = millis();
     dev_1_state = !dev_1_state;
-    updateClients(String(dev_1), dev_1_state);
+    updateClients(String(dev_1), dev_1_state, -1);
     digitalWrite(dev_1_pin, dev_1_state);
   }
   if (digitalRead(dev_2_manual) == HIGH && millis() - last_push_2 > 500) {
     last_push_2 = millis();
     dev_2_state = !dev_2_state;
-    updateClients(String(dev_2), dev_2_state);
+    updateClients(String(dev_2), dev_2_state, -1);
     digitalWrite(dev_2_pin, dev_2_state);
   }
   if (digitalRead(dev_3_manual) == HIGH && millis() - last_push_3 > 500) {
     last_push_3 = millis();
     dev_3_state = !dev_3_state;
-    updateClients(String(dev_3), dev_3_state);
+    updateClients(String(dev_3), dev_3_state, -1);
     digitalWrite(dev_3_pin, dev_3_state);
   }
   if (digitalRead(dev_4_manual) == HIGH && millis() - last_push_4 > 500) {
     last_push_4 = millis();
     dev_4_state = !dev_4_state;
-    updateClients(String(dev_4), dev_4_state);
+    updateClients(String(dev_4), dev_4_state, -1);
     digitalWrite(dev_4_pin, dev_4_state);
   }
   WiFiClient client = wifiServer.available();

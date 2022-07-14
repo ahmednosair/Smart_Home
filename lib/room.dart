@@ -128,9 +128,10 @@ class Room {
     if (dev == rawDev) {
       return "Unknown device";
     }
+    switchState[deviceToIndex[dev] as int] = (cmd == "ON");
+    switchesBoxSetState!(() {});
     bool success = await sendCommand(dev, cmd);
     if (success) {
-      switchState[deviceToIndex[dev] as int] = (cmd == "ON");
       return "";
     }
     return "Can't send command to the module\nPlease sure that you are connected to the WiFi or try to restart the application";

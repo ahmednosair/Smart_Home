@@ -37,23 +37,20 @@ class _SensorBoxState extends State<SensorsBox> {
     for (String sensor in widget.room.sensorsNames) {
       rows.add(Row(
         children: [
-          Text(
-              sensor,
-              style: const TextStyle(fontSize: 24),
-            ),const SizedBox(width: 35,),
-
-          DecoratedBox(
-            decoration: BoxDecoration(border: Border.all(width: 3),borderRadius: BorderRadius.circular(20)),
-            child: ConstrainedBox(constraints: const BoxConstraints(minWidth: 85,minHeight: 50),
-            child: Center(child:Text(
-              widget
-                  .room.sensorsValues[widget.room.sensorToIndex[sensor] as int],
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24),
-            )),),
+           Text(
+            sensor,
+            style: const TextStyle(fontSize: 24),
           ),
+        const SizedBox(width: 20,),
+         SizedBox(width: 100,child: TextField(
+            readOnly: true,
+            controller: TextEditingController(text: widget
+                .room.sensorsValues[widget.room.sensorToIndex[sensor] as int]),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 24),
+          ),),
         ],
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         mainAxisSize: MainAxisSize.min,
       ));
     }

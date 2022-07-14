@@ -50,7 +50,7 @@ class _HomePageState extends State<HomePage>
       return;
     }
     final String subnet =
-        ipRng.substring(0, ipRng.lastIndexOf('.'));//  "192.168.1";
+        ipRng.substring(0, ipRng.lastIndexOf('.')); // "192.168.1";
     const int port = 55555;
     for (int i = 2; i < 255; i++) {
       String ip = '$subnet.$i';
@@ -74,7 +74,7 @@ class _HomePageState extends State<HomePage>
     bool done = false;
     Stream broadStream = socket.asBroadcastStream();
     StreamSubscription sub = broadStream.listen((event) {
-      String s = const AsciiDecoder().convert(event);
+      String s = const Utf8Decoder().convert(event);
       response.write(s);
       if (s.contains("\n")) {
         done = true;
@@ -151,7 +151,7 @@ class _HomePageState extends State<HomePage>
       }
       final int index = rooms[roomIndex].channels.length - 1;
       StreamSubscription sub = broadStream.listen((event) {
-        String raw = const AsciiDecoder().convert(event);
+        String raw = const Utf8Decoder().convert(event);
         rooms[roomIndex].buffs[index].write(raw);
         String str = rooms[roomIndex].buffs[index].toString();
         if (str.contains("\n")) {

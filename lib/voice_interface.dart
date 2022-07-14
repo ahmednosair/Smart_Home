@@ -10,7 +10,7 @@ class VoiceInterface extends StatefulWidget {
   final Room room;
   final SpeechToText speech = SpeechToText();
 
-   VoiceInterface({
+  VoiceInterface({
     Key? key,
     required this.room,
   }) : super(key: key);
@@ -23,9 +23,10 @@ class VoiceInterface extends StatefulWidget {
 
 class _VoiceInterfaceState extends State<VoiceInterface> {
   bool isListen = false;
-@override
+
+  @override
   void initState() {
-   super.initState();
+    super.initState();
     widget.speech.initialize();
   }
 
@@ -44,9 +45,7 @@ class _VoiceInterfaceState extends State<VoiceInterface> {
             widget.room
                 .executeVoiceCommand(value.recognizedWords)
                 .then((result) {
-              if (result.isEmpty) {
-                widget.room.switchesBoxSetState!(() {});
-              } else {
+              if (result.isNotEmpty) {
                 showDialog<String>(
                   context: context,
                   builder: (BuildContext context) => AlertDialog(
@@ -61,7 +60,7 @@ class _VoiceInterfaceState extends State<VoiceInterface> {
                   ),
                 );
               }
-            }).timeout(const Duration(seconds: 2), onTimeout: () {
+            }).timeout(const Duration(seconds: 10), onTimeout: () {
               showDialog<String>(
                 context: context,
                 builder: (BuildContext context) => AlertDialog(
@@ -116,5 +115,4 @@ class _VoiceInterfaceState extends State<VoiceInterface> {
           height: 70,
         ));
   }
-
 }
