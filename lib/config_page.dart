@@ -74,8 +74,8 @@ class _ConfigPageState extends State<ConfigPage> with AutomaticKeepAliveClientMi
                 ),
               ),
               validator: (value) {
-                if (value != null && value.length > 50) {
-                  return "Enter max. 50 characters";
+                if (value != null && value.length > 63) {
+                  return "Enter max. 63 characters";
                 } else if (value != null && value.isEmpty) {
                   return "WiFi password required";
                 } else {

@@ -18,7 +18,7 @@ DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
 
 char room[41];
 char wifiName[51] = {0};
-char wifiPass[51] = {0};
+char wifiPass[64] = {0};
 char dev_1[31] ;
 char dev_2[31] ;
 char dev_3[31] ;
@@ -147,8 +147,6 @@ void loadJsonConf() {
 }
 void setup()
 {
-
-
   Serial.begin(115200);
   pinMode(dev_1_pin, OUTPUT);
   pinMode(dev_2_pin, OUTPUT);
@@ -219,19 +217,41 @@ void setup()
             {
               Serial.println(msg);
               client.stop();
+              String tmp;
               int sep1 = msg.indexOf("#");
+              if (sep1 > 40) {
+                break;
+              }
               strcpy(room, msg.substring(0, sep1).c_str());
               int sep2 = msg.indexOf("#", sep1 + 1);
+              if (sep2 - sep1 - 1 > 50) {
+                break;
+              }
               strcpy(wifiName, msg.substring(sep1 + 1, sep2).c_str());
               int sep3 = msg.indexOf("#", sep2 + 1);
+              if (sep3 - sep2 - 1 > 63) {
+                break;
+              }
               strcpy(wifiPass, msg.substring(sep2 + 1, sep3).c_str());
               int sep4 = msg.indexOf("#", sep3 + 1);
+              if (sep4 - sep3 - 1 > 30) {
+                break;
+              }
               strcpy(dev_1, msg.substring(sep3 + 1, sep4).c_str());
               int sep5 = msg.indexOf("#", sep4 + 1);
+              if (sep5 - sep4 - 1 > 30) {
+                break;
+              }
               strcpy(dev_2, msg.substring(sep4 + 1, sep5).c_str());
               int sep6 = msg.indexOf("#", sep5 + 1);
+              if (sep6 - sep5 - 1 > 30) {
+                break;
+              }
               strcpy(dev_3, msg.substring(sep5 + 1, sep6).c_str());
               int sep7 = msg.indexOf("#", sep6 + 1);
+              if (sep7 - sep6 - 1 > 30) {
+                break;
+              }
               strcpy(dev_4, msg.substring(sep6 + 1, sep7).c_str());
 #if defined(ARDUINOJSON_VERSION_MAJOR) && ARDUINOJSON_VERSION_MAJOR >= 6
               DynamicJsonDocument json(1024);
