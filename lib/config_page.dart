@@ -262,8 +262,8 @@ class _ConfigPageState extends State<ConfigPage> with AutomaticKeepAliveClientMi
           dev4 +
           "#");
       await sock.flush();
-      sock.close();
       Future.delayed(const Duration(seconds: 7),(){
+        sock.close();
         widget.getLoadRooms()!();
         Navigator.of(context).pop();
         showDialog<String>(

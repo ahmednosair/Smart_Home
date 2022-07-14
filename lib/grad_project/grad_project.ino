@@ -165,8 +165,6 @@ void setup()
     clearConf();
     delay(1000);
     ESP.restart();
-  } else {
-    Serial.println("daaa");
   }
   digitalWrite(dev_1_pin, dev_1_state);
   digitalWrite(dev_2_pin, dev_2_state);
@@ -276,21 +274,14 @@ void setup()
   }
 configured: WiFi.mode(WIFI_STA);
   WiFi.begin(wifiName, wifiPass);
-  Serial.print("Connecting to ");
-  Serial.print(wifiName);
-  Serial.print(wifiPass);
-  Serial.println("...");
-  //Wait for WiFi to connect for a maximum timeout of 10 seconds
+  //Wait for WiFi to connect for a maximum timeout of 20 seconds
   int retries = 200;
   while ((WiFi.status() != WL_CONNECTED && (retries || !needConf)))
   {
     drd.loop();
-    Serial.print(".");
     retries--;
     delay(100);
   }
-
-  Serial.println();
   //Inform the user whether the timeout has occured, or the ESP8266 is connected to the internet
   if (WiFi.status() == WL_CONNECTED) //WiFi has succesfully Connected
   {
@@ -299,8 +290,6 @@ configured: WiFi.mode(WIFI_STA);
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.print("Unable to Connect to ");
-    Serial.println(wifiName);
     if (needConf) {
       clearConf();
     }
@@ -329,8 +318,6 @@ void removeClient(int index) {
   for (int i = index; i + 1 < n_clients; i++) {
     clients[i] = clients[i + 1];
   }
-  Serial.println("client removed, index: ");
-  Serial.println(index);
   n_clients--;
 }
 
@@ -352,7 +339,6 @@ void sendSensorsReading() {
   }
   float reading = total / 32.0;
   temperatureC = reading / 3.2226;
-  Serial.println(temperatureC);
   for (int i = 0; i < n_clients; i++) {
     if (!clients[i]->connected()) {
       removeClient(i);
@@ -379,7 +365,6 @@ bool handleClient(int index) {
   if (command.length() <= 0) {
     return true;
   }
-  Serial.println(command);
   int value;
   int sep = command.indexOf('#');
   if (command.substring(sep + 1) == "ON") {
@@ -434,7 +419,6 @@ String initializeClient() {
   msg.concat("Temperature#");
   msg.concat(String((int)round(temperatureC)) + "°C#");
   msg.concat("\n");
-  Serial.println(msg);
   return msg;
 }
 
