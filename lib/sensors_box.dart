@@ -37,10 +37,10 @@ class _SensorBoxState extends State<SensorsBox> {
     for (String sensor in widget.room.sensorsNames) {
       rows.add(Row(
         children: [
-           Text(
-            sensor,
-            style: const TextStyle(fontSize: 24),
-          ),
+           SizedBox(width: 150,child: Text(
+             sensor,
+             style: const TextStyle(fontSize: 24),
+           textAlign: TextAlign.center,),),
         const SizedBox(width: 20,),
          SizedBox(width: 100,child: TextField(
             readOnly: true,

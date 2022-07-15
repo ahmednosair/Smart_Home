@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:mutex/mutex.dart';
 
 class Room {
   String image = "";
@@ -19,6 +20,7 @@ class Room {
   final List<StreamSubscription> subs = [];
   final List<StringBuffer> buffs = [];
   final Map<int, int> ack = {};
+  final List<Mutex> buffMutexes = [];
 
   Room(String name) {
     roomName = name;

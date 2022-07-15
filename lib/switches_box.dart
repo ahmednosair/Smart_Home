@@ -60,11 +60,38 @@ class _SwitchesBoxState extends State<SwitchesBox> {
                   success = widget.room.sendCommand(currDevice, "OFF");
                 }
                 setState(() {
+                  widget.room.buffMutexes[widget.room.deviceToChannel[device]!].acquire();
                   widget.room.switchState[curr] = value;
+                  widget.room.buffMutexes[widget.room.deviceToChannel[device]!].release();
+
                 });
                 success.then((success) {
                   if (!success) {
                     widget.loadRooms();
+                    if(Navigator.canPop(context)){
+                      showDialog<String>(
+                        context: context,
+                        builder: (BuildContext context) => AlertDialog(
+                          title: const Text('Error'),
+                          content: const Text(
+                              "Can't send command to the module\nPlease sure that you are connected to the WiFi or try to restart the application"),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                while (Navigator.canPop(context)) {
+                                  Navigator.pop(context);
+                                }
+                              },
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  }
+                }).timeout(const Duration(seconds: 10), onTimeout: () {
+                  if(Navigator.canPop(context)){
                     showDialog<String>(
                       context: context,
                       builder: (BuildContext context) => AlertDialog(
@@ -85,26 +112,6 @@ class _SwitchesBoxState extends State<SwitchesBox> {
                       ),
                     );
                   }
-                }).timeout(const Duration(seconds: 10), onTimeout: () {
-                  showDialog<String>(
-                    context: context,
-                    builder: (BuildContext context) => AlertDialog(
-                      title: const Text('Error'),
-                      content: const Text(
-                          "Can't send command to the module\nPlease sure that you are connected to the WiFi or try to restart the application"),
-                      actions: <Widget>[
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            while (Navigator.canPop(context)) {
-                              Navigator.pop(context);
-                            }
-                          },
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    ),
-                  );
                 });
               },
               activeTrackColor: Colors.lightGreenAccent,

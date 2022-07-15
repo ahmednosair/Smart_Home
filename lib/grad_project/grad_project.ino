@@ -23,10 +23,10 @@ char dev_1[31] ;
 char dev_2[31] ;
 char dev_3[31] ;
 char dev_4[31] ;
-const int dev_1_manual = 16; //D0
-const int dev_2_manual = 15; //D8
+const int dev_1_manual =  15; //D8
+const int dev_2_manual = 14; //D5
 const int dev_3_manual = 4; //D2
-const int dev_4_manual = 14; //D5
+const int dev_4_manual = 16; //D0
 long last_push_1 = 0;
 long last_push_2 = 0;
 long last_push_3 = 0;
@@ -41,10 +41,12 @@ const int dev_4_pin = 13; // D7
 bool dev_4_state = false;
 
 
-float temperatureC;
 const int MAX_CLIENTS = 10;
+const int MAX_SENSORS = 10;
 int n_clients = 0;
-unsigned long lastReadingTime;
+String sensorNames[MAX_SENSORS];
+String sensorValues[MAX_SENSORS];
+int n_sensors = 0;
 
 WiFiClient *clients[MAX_CLIENTS] = {NULL};
 
@@ -147,7 +149,7 @@ void loadJsonConf() {
 }
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(dev_1_pin, OUTPUT);
   pinMode(dev_2_pin, OUTPUT);
   pinMode(dev_3_pin, OUTPUT);
@@ -294,7 +296,6 @@ void setup()
   }
 configured: WiFi.mode(WIFI_STA);
   WiFi.begin(wifiName, wifiPass);
-  //Wait for WiFi to connect for a maximum timeout of 20 seconds
   int retries = 200;
   while ((WiFi.status() != WL_CONNECTED && (retries || !needConf)))
   {
@@ -315,9 +316,16 @@ configured: WiFi.mode(WIFI_STA);
     }
     ESP.restart();
   }
-
-  lastReadingTime = millis();
-  sendSensorsReading();
+  unsigned long lastReq = millis();
+  Serial.write('*');
+  while (n_sensors < 3) {
+    drd.loop();
+    if (millis() - lastReq > 200) {
+      lastReq = millis();
+      Serial.write('*');
+    }
+    handleArduino();
+  }
   wifiServer.begin();
 }
 
@@ -350,24 +358,7 @@ void updateClients(String deviceName, bool newState, int origin) {
   }
 }
 
-void sendSensorsReading() {
-  float vref = 3.3;
-  float resolution = vref / 1023;
-  unsigned int total = 0;
-  for (int n = 0; n < 32; n++ ) {
-    total += analogRead (A0);
-  }
-  float reading = total / 32.0;
-  temperatureC = reading / 3.2226;
-  for (int i = 0; i < n_clients; i++) {
-    if (!clients[i]->connected()) {
-      removeClient(i);
-      i--;
-      continue;
-    }
-    clients[i]->write((String("sensor#") + "Temperature#" + ((int)round(temperatureC)) + "°C\n").c_str());
-  }
-}
+
 
 bool handleClient(int index) {
   if (!clients[index]->connected()) {
@@ -418,6 +409,19 @@ bool handleClient(int index) {
 
 }
 
+String initializeSensors() {
+  String msg = "";
+  for (int i = 0 ; i < n_sensors ; i++) {
+    msg.concat(sensorNames[i]);
+    msg.concat("#");
+
+  }
+  for (int i = 0 ; i < n_sensors ; i++) {
+    msg.concat(sensorValues[i]);
+    msg.concat("#");
+  }
+  return msg;
+}
 
 String initializeClient() {
   String msg;
@@ -436,8 +440,7 @@ String initializeClient() {
   msg.concat(dev_3_state ? "ON#" : "OFF#");
   msg.concat(dev_4_state ? "ON#" : "OFF#");
   msg.concat("$");
-  msg.concat("Temperature#");
-  msg.concat(String((int)round(temperatureC)) + "°C#");
+  msg.concat(initializeSensors());
   msg.concat("\n");
   return msg;
 }
@@ -472,8 +475,51 @@ void clearConf() {
   configFile.close();
 }
 
+int findSensorIndex(String sensorName) {
+  for (int i = 0 ; i < n_sensors ; i++) {
+    if (sensorNames[i].equals(sensorName)) {
+      return i;
+    }
+  }
+  return -1;
+}
+void sendSensorsReading(String f) {
+  for (int i = 0; i < n_clients; i++) {
+    if (!clients[i]->connected()) {
+      removeClient(i);
+      i--;
+      continue;
+    }
+    clients[i]->write(f.c_str());
+  }
+}
+void handleArduino() {
+  while (Serial.available() > 0)
+  {
+    String arduinoBuff = Serial.readStringUntil('\n');
+    int sep1 = arduinoBuff.indexOf("#");
+    if (strcmp("sensor", arduinoBuff.substring(0, sep1).c_str()) == 0) {
+      int sep2 = arduinoBuff.indexOf("#", sep1 + 1);
+      String sensorName = arduinoBuff.substring(sep1 + 1, sep2);
+      int indx = findSensorIndex(sensorName.c_str());
+      if (indx == -1) {
+        if (n_sensors == MAX_SENSORS) {
+          return;
+        }
+        indx = n_sensors++;
+        sensorNames[indx] = sensorName;
+      }
+      int sep3 = arduinoBuff.indexOf("#", sep2 + 1);
+      sensorValues[indx] =  arduinoBuff.substring(sep2 + 1, sep3).c_str();
+    }
+    arduinoBuff.concat('\n');
+    sendSensorsReading(arduinoBuff);
+  }
+}
+
 void loop() {
   drd.loop();
+  handleArduino();
   if (digitalRead(dev_1_manual) == HIGH && millis() - last_push_1 > 500) {
     last_push_1 = millis();
     dev_1_state = !dev_1_state;
@@ -509,10 +555,6 @@ void loop() {
       i--;
     }
 
-  }
-  if (millis() - lastReadingTime > 60000) {
-    sendSensorsReading();
-    lastReadingTime = millis();
   }
 
 

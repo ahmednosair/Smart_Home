@@ -46,11 +46,30 @@ class _VoiceInterfaceState extends State<VoiceInterface> {
                 .executeVoiceCommand(value.recognizedWords)
                 .then((result) {
               if (result.isNotEmpty) {
+                if(Navigator.canPop(context)){
+                  showDialog<String>(
+                    context: context,
+                    builder: (BuildContext context) => AlertDialog(
+                      title: const Text('Error'),
+                      content: Text(result),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, 'OK'),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              }
+            }).timeout(const Duration(seconds: 10), onTimeout: () {
+              if(Navigator.canPop(context)){
                 showDialog<String>(
                   context: context,
                   builder: (BuildContext context) => AlertDialog(
                     title: const Text('Error'),
-                    content: Text(result),
+                    content: const Text(
+                        "Can't send command to the module\nPlease sure that you are connected to the WiFi or try to restart the application"),
                     actions: <Widget>[
                       TextButton(
                         onPressed: () => Navigator.pop(context, 'OK'),
@@ -60,21 +79,6 @@ class _VoiceInterfaceState extends State<VoiceInterface> {
                   ),
                 );
               }
-            }).timeout(const Duration(seconds: 10), onTimeout: () {
-              showDialog<String>(
-                context: context,
-                builder: (BuildContext context) => AlertDialog(
-                  title: const Text('Error'),
-                  content: const Text(
-                      "Can't send command to the module\nPlease sure that you are connected to the WiFi or try to restart the application"),
-                  actions: <Widget>[
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, 'OK'),
-                      child: const Text('OK'),
-                    ),
-                  ],
-                ),
-              );
             });
           }
         });

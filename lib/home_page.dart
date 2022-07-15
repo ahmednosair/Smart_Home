@@ -74,6 +74,7 @@ class _HomePageState extends State<HomePage>
     bool done = false;
     Stream broadStream = socket.asBroadcastStream();
     StreamSubscription sub = broadStream.listen((event) {
+
       String s = const Utf8Decoder().convert(event);
       response.write(s);
       if (s.contains("\n")) {
@@ -135,6 +136,7 @@ class _HomePageState extends State<HomePage>
       rooms[roomIndex].channels.add(socket);
       rooms[roomIndex].ack[rooms[roomIndex].channels.length - 1] = 0;
       rooms[roomIndex].buffs.add(StringBuffer());
+      rooms[roomIndex].buffMutexes.add(Mutex());
       int k = oldDevicesSize;
       for (int i = oldDevicesSize;
           i < rooms[roomIndex].devicesNames.length;
@@ -151,6 +153,7 @@ class _HomePageState extends State<HomePage>
       }
       final int index = rooms[roomIndex].channels.length - 1;
       StreamSubscription sub = broadStream.listen((event) {
+        rooms[roomIndex].buffMutexes[index].acquire();
         String raw = const Utf8Decoder().convert(event);
         rooms[roomIndex].buffs[index].write(raw);
         String str = rooms[roomIndex].buffs[index].toString();
@@ -182,29 +185,32 @@ class _HomePageState extends State<HomePage>
             }
           }
         }
+        rooms[roomIndex].buffMutexes[index].release();
       }, onError: (error) {
         loadRooms();
         if (kDebugMode) {
           print("Module socket disconnected");
         }
-        showDialog<String>(
-          context: context,
-          builder: (BuildContext context) => AlertDialog(
-            title: const Text('Error'),
-            content: const Text("Module disconnected"),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context, 'OK');
-                  while (Navigator.canPop(context)) {
+        if(Navigator.canPop(context)){
+          showDialog<String>(
+            context: context,
+            builder: (BuildContext context) => AlertDialog(
+              title: const Text('Error'),
+              content: const Text("Module disconnected"),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
                     Navigator.pop(context);
-                  }
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
+                    while (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
       });
       rooms[roomIndex].subs.add(sub);
     });
