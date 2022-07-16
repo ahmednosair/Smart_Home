@@ -156,18 +156,26 @@ class Room {
   }
 
   void dispose() async {
-    for (Socket socket in channels) {
-      try {
-        socket.close();
+    for (StreamSubscription sub in subs) {
+      try{
+        await sub.cancel();
+
       } catch (e) {
         if (kDebugMode) {
           print("Closing a bad socket");
         }
       }
     }
-    for (StreamSubscription sub in subs) {
-      sub.cancel();
+    for (Socket socket in channels) {
+      try {
+       await socket.close();
+      } catch (e) {
+        if (kDebugMode) {
+          print("Closing a bad socket");
+        }
+      }
     }
+
     devicesNames.clear();
     switchState.clear();
     sensorsNames.clear();
